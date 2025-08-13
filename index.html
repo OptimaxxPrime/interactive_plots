@@ -21,6 +21,7 @@
 
   /* Flex layout for vertical stacking */
   body {
+    background-color: black;
     display: flex;
     flex-direction: column;
     height: 100dvh; /* Full screen height */
@@ -200,7 +201,7 @@ const polarPlot = document.getElementById('polar-plot');
 const linearPlot = document.getElementById('linear-plot');
 const heatmapPlot = document.getElementById('heatmap-plot');
 const axises = ["x-axis", "y-axis", "z-axis"];
-const pols = ["HH", "HV", "VH", "VV"];
+const pols = ['VV', 'HV', 'VH', 'HH'];
 
 // Colormap function from original file
 function colormap(val) {
@@ -214,105 +215,68 @@ function colormap(val) {
 
 let dataStore, phi, models;
 
-fetch('data.json')
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok ' + response.statusText);
-        }
-        return response.json();
-    })
-    .then(data => {
-        // Validate data structure
-        if (!data || !data.phi || !data.freq) {
-            throw new Error('Missing required data fields (phi or freq)');
-        }
+async function loadData(plotType) {
+    const fileMap = {
+        polar: 'data_polar.json',
+        linear: 'data_linear.json',
+        heatmap: 'data_heatmap.json'
+    };
 
-        dataStore = data;
-        // Filter out special keys (phi and freq) to get model names
-        models = Object.keys(dataStore).filter(k => k !== 'phi' && k !== 'freq');
-        
-        if (models.length === 0) {
-            throw new Error('No model data found');
-        }
-
-        // Validate model data structure
-        models.forEach(model => {
-            if (!dataStore[model] || !dataStore[model].rcs) {
-                throw new Error(`Invalid data structure for model: ${model}`);
-            }
-        });
-
-        phi = dataStore.phi;
-
-        // Populate dropdowns
-        models.forEach(m => modelSel.add(new Option(m, m)));
-        axises.forEach(a => axisSel.add(new Option(a, a)));
-        pols.forEach(p => polSel.add(new Option(p, p)));
-
-        // Add event listeners
-        plotTypeSel.addEventListener('change', masterUpdate);
-        modelSel.addEventListener('change', masterUpdate);
-        axisSel.addEventListener('change', masterUpdate);
-        polSel.addEventListener('change', masterUpdate);
-        slider.addEventListener('input', masterUpdate);
-
-        console.log('Data loaded successfully:', {
-            models: models,
-            freqLength: dataStore.freq.length,
-            phiLength: phi.length
-        });
-
-        // Initial plot render
-        masterUpdate();
-    })
-    .catch(error => {
-        console.error('Error fetching or parsing data:', error);
-        polarPlot.innerHTML = `<p style="color: red;">Error loading data: ${error.message}. Please check if data.json is available and correctly formatted.</p>`;
-    });
-
-function masterUpdate() {
     try {
-        const plotType = plotTypeSel.value;
-        const model = modelSel.value;
-        
-        if (!dataStore || !dataStore[model] || !dataStore[model].rcs) {
-            throw new Error(`Invalid data for model: ${model}`);
+        const response = await fetch(fileMap[plotType]);
+        dataStore = await response.json();
+
+        phi = dataStore.phi || [];
+        models = Object.keys(dataStore).filter(k => k !== 'phi' && k !== 'freq');
+
+        // Populate dropdowns only once
+        if (modelSel.options.length === 0) {
+            models.forEach(m => modelSel.add(new Option(m, m)));
+            axises.forEach(a => axisSel.add(new Option(a, a)));
+            pols.forEach(p => polSel.add(new Option(p, p)));
         }
 
-        const sliderContainer = document.getElementById('freq-slider').parentElement;
+        masterUpdate();  // render initial plot
 
-        if (plotType === 'polar') {
-            polarPlot.style.display = 'block';
-            linearPlot.style.display = 'none';
-            heatmapPlot.style.display = 'none';
-            slider.style.display = 'block';
-            freqLabel.style.display = 'inline';
-            const freqCount = dataStore.freq.length;
-            slider.max = freqCount - 1;
-            updatePolarPlot();
-        } else if (plotType === 'linear') {
-            polarPlot.style.display = 'none';
-            linearPlot.style.display = 'block';
-            heatmapPlot.style.display = 'none';
-            slider.style.display = 'block';
-            freqLabel.style.display = 'inline';
-            slider.max = phi.length - 1;
-            updateLinearPlot();
-        } else if (plotType === 'heatmap') {
-            polarPlot.style.display = 'none';
-            linearPlot.style.display = 'none';
-            heatmapPlot.style.display = 'inline';
-            slider.style.display = 'none';
-            freqLabel.style.display = 'none';
-            updateHeatmapPlot();
-        }
-    } catch (error) {
-        console.error('Error updating plot:', error);
-        polarPlot.innerHTML = `<p style="color: red;">Error updating plot: ${error.message}</p>`;
-        linearPlot.innerHTML = '';
-        heatmapPlot.innerHTML = '';
+    } catch (err) {
+        console.error('Error loading data:', err);
+        polarPlot.innerHTML = `<p style="color:red;">Failed to load data for ${plotType}</p>`;
     }
 }
+
+function masterUpdate() {
+    const plotType = plotTypeSel.value;
+
+    // Show/hide plots & slider based on type
+    polarPlot.style.display = plotType === 'polar' ? 'block' : 'none';
+    linearPlot.style.display = plotType === 'linear' ? 'block' : 'none';
+    heatmapPlot.style.display = plotType === 'heatmap' ? 'block' : 'none';
+    
+    const showSlider = plotType === 'polar' || plotType === 'linear';
+    slider.style.display = showSlider ? 'block' : 'none';
+    freqLabel.style.display = showSlider ? 'inline' : 'none';
+    
+    if (plotType === 'polar') {
+        slider.max = dataStore.freq.length - 1;
+        updatePolarPlot();
+    } else if (plotType === 'linear') {
+        slider.max = phi.length - 1;
+        updateLinearPlot();
+    } else if (plotType === 'heatmap') {
+        updateHeatmapPlot();
+    }
+}
+
+// Event listeners
+plotTypeSel.addEventListener('change', () => loadData(plotTypeSel.value));
+modelSel.addEventListener('change', masterUpdate);
+axisSel.addEventListener('change', masterUpdate);
+polSel.addEventListener('change', masterUpdate);
+slider.addEventListener('input', masterUpdate);
+
+// Initial load
+loadData(plotTypeSel.value);
+
 
 function updatePolarPlot() {
     const model = modelSel.value;
@@ -412,6 +376,7 @@ function updateLinearPlot() {
         plot_bgcolor: 'black',
         font: { color: 'white', size: 12 },
         xaxis: {
+            type:'log',
             title: 'Frequency (MHz)',
             color: 'white',
             gridcolor: '#444',
@@ -419,7 +384,7 @@ function updateLinearPlot() {
         },
         yaxis: {
             title: 'RCS (dBsm)',
-            range: [-40, -5],
+            range: [-30, 0],
             color: 'white',
             gridcolor: '#444',
             tickfont: { size: 12 }
@@ -451,7 +416,7 @@ function updateHeatmapPlot() {
         y: freq,
         z: z_data_transposed,
         zmin:-40,
-        zmax: 0,
+        zmax: -5,
         zsmooth: 'best',
         type: 'heatmap',
         colorscale: 'Jet',
@@ -472,6 +437,7 @@ function updateHeatmapPlot() {
           tickfont: { size: 12 }
         },
         yaxis: {
+            type: 'log',
             title: 'Frequency (MHz)',
             color: 'white',
             tickfont: { size: 12 }
