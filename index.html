@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+body {
+    background-color: black;
+    color: white;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
+
+  .controls {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+
+  .dropdown-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+  }
+
+  .plot-container {
+    flex: 1;
+    margin-top: 150px; /* Height of header */
+    margin-bottom: 200px; /* Height of footer */
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .slider-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 16px;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    height: 200px;
+  }
+
+  select {
+    background-color: #222;
+    border: 1px solid #444;
+    border-radius: 12px;
+    color: white;
+    padding: 16px;
+    font-size: 16px;
+    width: 100%;
+    appearance: none; 
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  select:focus {
+    outline: none;
+    border-color: #666;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
+  }
+
+  #freq-slider {
+    width: 100%;
+    margin: 24px 0;
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: #222;
+    height: 36px;
+    border-radius: 18px;
+    padding: 0 8px;
+  }
+
+  #freq-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 36px;
+    height: 36px;
+    background: white;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  }
+
+  #freq-slider::-moz-range-thumb {
+    width: 36px;
+    height: 36px;
+    background: white;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    border: none;
+  }
+
+  .slider-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #freqLabel {
+    display: block;
+    text-align: center;
+    font-size: 12px;
+    color: #fff;
+  }
+
+  #polar-plot, #linear-plot, #heatmap-plot {
+    width: 100%;
+    height: 100%;
+    max-width: 800px;
+    max-height: 800px;
+  }
+
+  /* Make plots responsive */
+  .js-plotly-plot {
+    width: 100% !important;
+    height: 100% !important;
+    touch-action: pan-x pan-y;
+  }
+
+  @media (max-width: 480px) {
+    .header {
+      padding: 12px;
+    }
+
+    .plot-container {
+      margin-top: 90px;
+      margin-bottom: 76px;
+    }
+
+    .dropdown-grid {
+      gap: 12px;
+    }
+
+    select {
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    .slider-container {
+      padding: 12px;
+      height: 76px;
+    }
+
+    #freq-slider {
+      height: 32px;
+      border-radius: 16px;
+    }
+
+    #freq-slider::-webkit-slider-thumb {
+      width: 32px;
+      height: 32px;
+    }
+
+    #freq-slider::-moz-range-thumb {
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  @media (max-height: 600px) {
+    .header {
+      padding: 8px;
+    }
+
+    .plot-container {
+      margin-top: 82px;
+      margin-bottom: 68px;
+    }
+
+    .slider-container {
+      padding: 8px;
+      height: 68px;
+    }
+
+    select {
+      padding: 8px;
+    }
+  }
+    </style>
+</head>
+<body>
+<header class="header">
+    <div class="controls">
+        <div class="dropdown-grid">
+            <select id="plot-type">
+                <option value="polar">Polar Plot</option>
+                <option value="linear">Linear Plot</option>
+                <option value="heatmap">Heatmap</option>
+            </select>
+            <select id="model" aria-label="Select model"></select>
+            <select id="axis" aria-label="Select axis"></select>
+            <select id="pol" aria-label="Select polarization"></select>
+        </div>
+    </div>
+</header>
+
+<main class="plot-container">
+    <div id="polar-plot"></div>
+    <div id="linear-plot" style="display: none;"></div>
+    <div id="heatmap-plot" style="display: none;"></div>
+</main>
+
+<footer class="slider-container">
+    <div class="slider-wrapper">
+        <span id="freqLabel"></span>
+        <input type="range" id="freq-slider" min="0" max="799" value="0" step="1" aria-label="Frequency slider">
+    </div>
+</footer>
+
+<script>
+const plotTypeSel = document.getElementById('plot-type');
+const modelSel = document.getElementById('model');
+const axisSel = document.getElementById('axis');
+const polSel = document.getElementById('pol');
+const slider = document.getElementById('freq-slider');
+const freqLabel = document.getElementById('freqLabel');
+const polarPlot = document.getElementById('polar-plot');
+const linearPlot = document.getElementById('linear-plot');
+const heatmapPlot = document.getElementById('heatmap-plot');
+
+const axises = ["x-axis", "y-axis", "z-axis"];
+const pols = ["HH", "HV", "VH", "VV"];
+
+// Colormap function from original file
+function colormap(val) {
+    const vmin = -40, vmax = 0;
+    const ratio = Math.min(Math.max((val - vmin)/(vmax - vmin), 0), 1);
+    const cmap = Plotly.d3.scale.linear()
+        .domain([0, 0.35, 0.66, 1.0])
+        .range(["rgb(0,0,143)", "rgb(0,255,255)", "rgb(255,255,0)", "rgb(128,0,0)"]);
+    return cmap(ratio);
+}
+
+let dataStore, phi, models;
+
+fetch('data.json')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Validate data structure
+        if (!data || !data.phi || !data.freq) {
+            throw new Error('Missing required data fields (phi or freq)');
+        }
+
+        dataStore = data;
+        // Filter out special keys (phi and freq) to get model names
+        models = Object.keys(dataStore).filter(k => k !== 'phi' && k !== 'freq');
+        
+        if (models.length === 0) {
+            throw new Error('No model data found');
+        }
+
+        // Validate model data structure
+        models.forEach(model => {
+            if (!dataStore[model] || !dataStore[model].rcs) {
+                throw new Error(`Invalid data structure for model: ${model}`);
+            }
+        });
+
+        phi = dataStore.phi;
+
+        // Populate dropdowns
+        models.forEach(m => modelSel.add(new Option(m, m)));
+        axises.forEach(a => axisSel.add(new Option(a, a)));
+        pols.forEach(p => polSel.add(new Option(p, p)));
+
+        // Add event listeners
+        plotTypeSel.addEventListener('change', masterUpdate);
+        modelSel.addEventListener('change', masterUpdate);
+        axisSel.addEventListener('change', masterUpdate);
+        polSel.addEventListener('change', masterUpdate);
+        slider.addEventListener('input', masterUpdate);
+
+        console.log('Data loaded successfully:', {
+            models: models,
+            freqLength: dataStore.freq.length,
+            phiLength: phi.length
+        });
+
+        // Initial plot render
+        masterUpdate();
+    })
+    .catch(error => {
+        console.error('Error fetching or parsing data:', error);
+        polarPlot.innerHTML = `<p style="color: red;">Error loading data: ${error.message}. Please check if data.json is available and correctly formatted.</p>`;
+    });
+
+function masterUpdate() {
+    try {
+        const plotType = plotTypeSel.value;
+        const model = modelSel.value;
+        
+        if (!dataStore || !dataStore[model] || !dataStore[model].rcs) {
+            throw new Error(`Invalid data for model: ${model}`);
+        }
+
+        const sliderContainer = document.getElementById('freq-slider').parentElement;
+
+        if (plotType === 'polar') {
+            polarPlot.style.display = 'block';
+            linearPlot.style.display = 'none';
+            heatmapPlot.style.display = 'none';
+            slider.style.display = 'block';
+            // freqLabel.style.display = 'inline';
+            const freqCount = dataStore.freq.length;
+            slider.max = freqCount - 1;
+            updatePolarPlot();
+        } else if (plotType === 'linear') {
+            polarPlot.style.display = 'none';
+            linearPlot.style.display = 'block';
+            heatmapPlot.style.display = 'none';
+            slider.style.display = 'block';
+            // freqLabel.style.display = 'inline';
+            slider.max = phi.length - 1;
+            updateLinearPlot();
+        } else if (plotType === 'heatmap') {
+            polarPlot.style.display = 'none';
+            linearPlot.style.display = 'none';
+            heatmapPlot.style.display = 'block';
+            slider.style.display = 'none';
+            // freqLabel.style.display = 'none';
+            updateHeatmapPlot();
+        }
+    } catch (error) {
+        console.error('Error updating plot:', error);
+        polarPlot.innerHTML = `<p style="color: red;">Error updating plot: ${error.message}</p>`;
+        linearPlot.innerHTML = '';
+        heatmapPlot.innerHTML = '';
+    }
+}
+
+function updatePolarPlot() {
+    const model = modelSel.value;
+    const axis = axisSel.value;
+    const pol = polSel.value;
+    const freqIdx = parseInt(slider.value);
+
+    const freq = dataStore.freq;
+    const rcs = dataStore[model].rcs;
+    const axisIdx = axises.indexOf(axis);
+    const polIdx = pols.indexOf(pol);
+
+    freqLabel.textContent = `Frequency: ${(freq[freqIdx] / 1e6).toFixed(1)} MHz`;
+
+    const r = rcs[axisIdx].map(angleData => angleData[freqIdx][polIdx]);
+
+    let traces = [];
+    for (let i = 0; i < phi.length - 1; i++) {
+        traces.push({
+            type: 'scatterpolar',
+            r: [r[i], r[i+1]],
+            theta: [phi[i], phi[i+1]],
+            mode: 'lines',
+            line: { color: colormap(r[i]), width: 2 },
+            hoverinfo: 'skip',
+            showlegend: false
+        });
+    }
+    traces.push({
+        type: 'scatterpolar',
+        r: [r[phi.length - 1], r[0]],
+        theta: [phi[phi.length - 1], phi[0]],
+        mode: 'lines',
+        line: { color: colormap(r[phi.length - 1]), width: 2 },
+        hoverinfo: 'skip',
+        showlegend: false
+    });
+
+    Plotly.newPlot(polarPlot, traces, {
+        paper_bgcolor: 'black',
+        plot_bgcolor: 'black',
+        font: { color: 'white' },
+        polar: {
+            bgcolor: 'black',
+            radialaxis: { 
+                range: [-40, 0], 
+                tickfont: { color: 'white', size: 12 }, 
+                color: 'white',
+                tickangle: 45
+            },
+            angularaxis: { 
+                showticklabels: true, 
+                tickfont: { color: 'white', size: 12 }, 
+                color: 'white'
+            }
+        },
+        margin: { l: 30, r: 30, t: 30, b: 30 },
+        dragmode: 'pan',
+        modeBarButtonsToRemove: ['select2d', 'lasso2d'],
+        displayModeBar: true,
+        responsive: true
+    }, { displayModeBar: true });
+}
+
+function updateLinearPlot() {
+    const model = modelSel.value;
+    const axis = axisSel.value;
+    const pol = polSel.value;
+    const phiIdx = parseInt(slider.value);
+
+    const freq = dataStore.freq.map(f => f / 1e6); // Freq in MHz
+    const rcs = dataStore[model].rcs;
+    const axisIdx = axises.indexOf(axis);
+    const polIdx = pols.indexOf(pol);
+
+    freqLabel.textContent = `Angle: ${phi[phiIdx].toFixed(2)}°`;
+
+    const rcs_at_phi = rcs[axisIdx].map(angleData => angleData.map(freqData => freqData[polIdx]))[phiIdx];
+
+    // Create segments with color based on y-value
+    let traces = [];
+    for (let i = 0; i < freq.length - 1; i++) {
+        traces.push({
+            x: [freq[i], freq[i+1]],
+            y: [rcs_at_phi[i], rcs_at_phi[i+1]],
+            mode: 'lines',
+            type: 'scatter',
+            line: { 
+                color: colormap(rcs_at_phi[i]),
+                width: 2 
+            },
+            hoverinfo: 'skip',
+            showlegend: false
+        });
+    }
+
+    Plotly.newPlot(linearPlot, traces, {
+        paper_bgcolor: 'black',
+        plot_bgcolor: 'black',
+        font: { color: 'white', size: 12 },
+        xaxis: {
+            title: 'Frequency (MHz)',
+            color: 'white',
+            gridcolor: '#444',
+            tickfont: { size: 12 }
+        },
+        yaxis: {
+            title: 'RCS (dBsm)',
+            range: [-50, 10],
+            color: 'white',
+            gridcolor: '#444',
+            tickfont: { size: 12 }
+        },
+        margin: { l: 60, r: 20, t: 30, b: 50 },
+        dragmode: 'pan',
+        modeBarButtonsToRemove: ['select2d', 'lasso2d'],
+        displayModeBar: true,
+        responsive: true
+    }, { displayModeBar: true });
+}
+
+function updateHeatmapPlot() {
+    const model = modelSel.value;
+    const axis = axisSel.value;
+    const pol = polSel.value;
+
+    const freq = dataStore.freq.map(f => f / 1e6); // Freq in MHz
+    const rcs = dataStore[model].rcs;
+    const axisIdx = axises.indexOf(axis);
+    const polIdx = pols.indexOf(pol);
+
+    const z_data = rcs[axisIdx].map(angleData =>
+        angleData.map(freqData => freqData[polIdx])
+    );
+    // To swap axes, we need to transpose the z_data matrix
+    const z_data_transposed = z_data[0].map((_, colIndex) => z_data.map(row => row[colIndex]));
+    
+    const trace = {
+        x: freq,
+        y: phi,
+        z: z_data,
+        zmin:-40,
+        zmax: 0,
+        zsmooth: 'best',
+        type: 'heatmap',
+        colorscale: 'Jet',
+        colorbar: {
+            title: 'RCS (dBsm)',
+            titlefont: { color: 'white' },
+            tickfont: { color: 'white' }
+        }
+    };
+
+    Plotly.newPlot(heatmapPlot, [trace], {
+        paper_bgcolor: 'black',
+        plot_bgcolor: 'black',
+        font: { color: 'white', size: 12 },
+        xaxis: {
+            title: 'Frequency (MHz)',
+            color: 'white',
+            tickfont: { size: 12 }
+        },
+        yaxis: {
+            title: 'Angle (°)',
+            color: 'white',
+            tickfont: { size: 12 }
+        },
+        margin: { l: 60, r: 30, t: 30, b: 50 },
+        dragmode: 'pan',
+        modeBarButtonsToRemove: ['select2d', 'lasso2d'],
+        displayModeBar: true,
+        responsive: true
+    }, { displayModeBar: true });
+}
+</script>
+</body>
+</html>
